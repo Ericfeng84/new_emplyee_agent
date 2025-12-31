@@ -1,0 +1,127 @@
+
+
+### 🌟 项目背景：CodeName "Nexus"
+
+**场景描述：**
+Nexus 是一个部署在公司内部 IM（如钉钉/飞书/Slack）中的 Agent。
+**它的目标是：** 帮助新员工快速适应环境，并自动化处理繁琐的行政流程。
+**它能做什么？**
+
+1. **知识检索：** “公司的报销额度是多少？”“VPN 怎么配置？”（基于私有文档）
+2. **业务操作：** “帮我预订明天下午 3 点的会议室。”“查询我的剩余年假。”（调用模拟 API）
+
+---
+
+### 🛠️ 推荐技术栈 (可根据实际情况替换)
+
+* **核心框架：** LangChain 或 LlamaIndex
+* **LLM：** OpenAI (GPT-4o) 或 DeepSeek/Qwen (开源/国产化适配)
+* **向量库：** Qdrant 或 Milvus (企业级)
+* **后端 API：** FastAPI
+* **中间件：** Redis (存储会话历史)
+
+---
+
+### 🚀 迭代路线图 (The Roadmap)
+
+我们将项目分为 7 个 Sprint（冲刺），从简单的 Demo 进化为生产级应用。
+
+#### Sprint 1: 原型与 Prompt 工程 (The "Brain")
+
+**目标：** 让 Agent 拥有基本的“人设”并能进行流畅对话。
+
+* **任务：**
+* 搭建基础 LLM 客户端环境。
+* 设计 System Prompt（系统提示词），定义 Nexus 的语气（专业、热情）、角色边界（只回答工作相关问题）。
+* **有趣环节：** 尝试“越狱”测试，看学员能否通过 Prompt 让 Agent 说出不该说的话，以此引入 Prompt 安全的重要性。
+
+
+* **学习重点：** Role-playing, Context Window, Temperature 参数。
+
+#### Sprint 2: 赋予知识 - RAG 基础 (The "Memory")
+
+**目标：** 让 Agent 回答关于“员工手册”的特定问题，而不是依靠模型的通用训练数据。
+
+* **任务：**
+* 数据准备：提供一份虚构的《员工手册.pdf》和《IT支持文档.md》。
+* ETL 流程：实现文档加载 (Loader)、切分 (Chunking) 和 向量化 (Embedding)。
+* 搭建向量数据库 (Vector DB) 并实现基础检索。
+
+
+* **企业级挑战：** 处理表格和混乱的格式（数据清洗）。
+* **学习重点：** Embeddings, Vector Search, Text Splitters, Hallucination (幻觉) 及其预防。
+
+#### Sprint 3: 赋予双手 - Tool Use / Function Calling (The "Hands")
+
+**目标：** Agent 不仅能“说”，还能“做”。
+
+* **任务：**
+* 定义模拟 API 函数：`search_employee_directory()` (查人), `book_meeting_room()` (订房), `query_leave_balance()` (查假)。
+* 将函数 Schema 绑定到 LLM。
+* 实现 Agent 自动判断何时只需聊天，何时需要调用工具。
+
+
+* **有趣环节：** 让 Agent 处理复合指令：“查一下 Alice 的邮箱，并帮我约她明天下午开会。”（需多步推理）。
+* **学习重点：** JSON Schema, Function Calling, ReAct 模式。
+
+#### Sprint 4: 记忆管理与多轮对话 (The "Context")
+
+**目标：** 实现像人一样的连续对话能力，而不是“金鱼记忆”。
+
+* **任务：**
+* 从内存存储 (Memory) 迁移到持久化存储 (Redis)。
+* 实现 `Session_ID` 机制，区分不同用户的对话。
+* **企业级挑战：** 设定 Token 预算，实现长对话的总结 (Summary) 或滑动窗口 (Sliding Window) 机制，防止上下文爆满。
+
+
+* **学习重点：** Chat History Management, Token Optimization, Statefulness.
+
+#### Sprint 5: 路由与编排 (The "Orchestrator")
+
+**目标：** 处理复杂场景，将 RAG 和 Tools 结合。
+
+* **任务：**
+* 构建**路由层 (Router)**：用户问“报销政策”走 RAG 分支，问“订房”走 Tool 分支，问“写代码”走纯 LLM 分支。
+* 实现意图识别 (Intent Recognition)。
+
+
+* **有趣环节：** 混合场景测试——“我想请假，但我不知道公司请假规定是什么？”（Agent 需要先 RAG 查规定，再调用 Tool 查询余额）。
+* **学习重点：** Agent Architecture, Chains vs Agents, Semantic Routing.
+
+#### Sprint 6: 安全与风控 (The "Shield")
+
+**目标：** 确保 Agent 不会泄露敏感信息或执行危险操作。
+
+* **任务：**
+* **输入护栏 (Input Guardrail)：** 拦截“Prompt 注入”攻击或非工作内容的闲聊。
+* **输出护栏 (Output Guardrail)：** 确保 Agent 不会输出 PII (个人敏感信息)，如身份证号或薪资数据（数据脱敏）。
+* 权限控制：普通员工不能调用“重启服务器”的 Tool。
+
+
+* **学习重点：** PII Redaction, Prompt Injection Defense, RBAC (Role-Based Access Control) for Agents.
+
+#### Sprint 7: 评估与观测 (The "Judge")
+
+**目标：** 上线前的最后一道防线，如何知道 Agent 表现好不好？
+
+* **任务：**
+* 接入 LangSmith 或 LangFuse 等观测平台。
+* 构建评估集 (Evaluation Dataset)：准备 20 个标准问题与答案 (Golden Answers)。
+* 使用 LLM-as-a-Judge 自动评估 RAG 的准确性 (Faithfulness) 和相关性 (Relevance)。
+
+
+* **学习重点：** LLM Ops, Tracing, Automated Evaluation, Ragas 指标。
+
+---
+
+### 💡 为什么这个流程适合企业培训？
+
+1. **循序渐进：** 从 Hello World 到 DevOps，符合认知规律。
+2. **痛点导向：** 涵盖了企业最关心的幻觉问题（Sprint 2）、数据安全（Sprint 6）和可观测性（Sprint 7）。
+3. **模块化：** 如果培训时间有限，可以只讲 Sprint 1-3 的核心链路；如果时间充裕，Sprint 4-7 才是拉开差距的高级内容。
+
+### 📌 下一步建议
+
+为了协助您准备培训材料，我可以为您生成其中任何一个 Sprint 的**核心代码框架**或**实战练习题**。
+
+**您希望先深入了解哪个 Sprint 的细节？**
