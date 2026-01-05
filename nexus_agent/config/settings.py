@@ -84,6 +84,77 @@ class NexusConfig(BaseSettings):
         description="Maximum tokens for conversation context"
     )
     
+    # Sprint 2: RAG Configuration
+    # Document Loading
+    data_directory: str = Field(
+        default="nexus_agent/data/documents",
+        description="Directory containing documents for RAG"
+    )
+    
+    # Text Splitting
+    chunk_size: int = Field(
+        default=1000,
+        ge=100,
+        le=4000,
+        description="Maximum chunk size for document splitting"
+    )
+    chunk_overlap: int = Field(
+        default=200,
+        ge=0,
+        le=1000,
+        description="Overlap between chunks"
+    )
+    text_splitter_strategy: Literal["recursive", "markdown"] = Field(
+        default="recursive",
+        description="Text splitting strategy"
+    )
+    
+    # Embeddings (BGE - 优化中文理解)
+    embedding_model: str = Field(
+        default="BAAI/bge-small-zh-v1.5",
+        description="Embedding model name (optimized for Chinese)"
+    )
+    embedding_device: Literal["cpu", "cuda"] = Field(
+        default="cpu",
+        description="Device for embedding generation"
+    )
+    normalize_embeddings: bool = Field(
+        default=True,
+        description="Whether to normalize embeddings (important for BGE models)"
+    )
+    
+    # Vector Store (Chroma)
+    vector_store_type: Literal["chroma"] = Field(
+        default="chroma",
+        description="Type of vector store"
+    )
+    chroma_collection: str = Field(
+        default="nexus_knowledge_base",
+        description="Chroma collection name"
+    )
+    chroma_persist_dir: Optional[str] = Field(
+        default="nexus_agent/data/chroma_db",
+        description="Directory for Chroma persistent storage"
+    )
+    
+    # Retrieval
+    retrieval_k: int = Field(
+        default=3,
+        ge=1,
+        le=20,
+        description="Number of documents to retrieve"
+    )
+    retrieval_score_threshold: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Minimum similarity score for retrieval"
+    )
+    retrieval_search_type: Literal["similarity", "mmr", "similarity_score_threshold"] = Field(
+        default="similarity",
+        description="Retrieval search type"
+    )
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
