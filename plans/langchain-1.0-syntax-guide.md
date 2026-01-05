@@ -463,7 +463,7 @@ agent.invoke(
 ### Using Pydantic Model
 
 ```python
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from langchain.agents import create_agent
 
 
@@ -540,6 +540,7 @@ result["structured_response"]
 
 ```python
 from langchain.agents import create_agent
+from langchain.agents.structured_output import ProviderStrategy
 
 
 contact_info_schema = {
@@ -567,18 +568,30 @@ result["structured_response"]
 
 ### with_structured_output Method
 
+The `with_structured_output()` method is an alternative way to configure structured output on a model instance. This is useful when you want to create a reusable model that always returns structured output.
+
 ```python
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from langchain_openai import ChatOpenAI
 
 
 class AnswerWithJustification(BaseModel):
-    answer: str
-    justification: str
+    """An answer with justification."""
+    answer: str = Field(description="The final answer")
+    justification: str = Field(description="The reasoning behind the answer")
 
 
-_model = model.with_structured_output(AnswerWithJustification)
-result = _model.invoke("What weighs more, a pound of bricks or a pound of feathers?")
+# Create a model with structured output
+model = ChatOpenAI(model="gpt-4o")
+structured_model = model.with_structured_output(AnswerWithJustification)
+
+# Invoke and get structured response
+result = structured_model.invoke("What weighs more, a pound of bricks or a pound of feathers?")
+print(result)
+# AnswerWithJustification(answer='They weigh the same', justification='Both are exactly one pound')
 ```
+
+**Note:** Use `with_structured_output()` when you want to create a reusable model instance. Use the `response_format` parameter in [`create_agent()`](#agents) when building agents that need structured output.
 
 ---
 

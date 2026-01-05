@@ -12,6 +12,7 @@ from ..config.settings import config
 from ..utils.logger import get_logger
 from .state import NexusAgentState
 from .tools import NEXUS_TOOLS
+from .api_tools import API_TOOLS
 from .middleware import (
     SafetyMiddleware,
     NexusModelSelectionMiddleware,
@@ -60,8 +61,8 @@ class NexusLangChainAgent:
         # Initialize logger
         self.logger = get_logger("nexus_langchain_agent")
         
-        # Initialize tools
-        self.tools = NEXUS_TOOLS
+        # Initialize tools - merge existing tools with API tools
+        self.tools = NEXUS_TOOLS + API_TOOLS
         
         # Initialize middleware
         self.middleware = []

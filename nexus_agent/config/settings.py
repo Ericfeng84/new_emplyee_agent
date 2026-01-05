@@ -155,6 +155,24 @@ class NexusConfig(BaseSettings):
         description="Retrieval search type"
     )
     
+    # Sprint 3: Tool Calling Configuration
+    enable_tool_calling: bool = Field(
+        default=True,
+        description="启用工具调用功能"
+    )
+    tool_calling_timeout: float = Field(
+        default=30.0,
+        ge=1.0,
+        le=120.0,
+        description="工具调用超时时间（秒）"
+    )
+    max_tool_calls_per_query: int = Field(
+        default=5,
+        ge=1,
+        le=10,
+        description="每次查询最多调用工具次数"
+    )
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
