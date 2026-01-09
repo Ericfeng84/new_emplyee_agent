@@ -98,14 +98,28 @@ nexus_agent/
 │   ├── processed/          # 处理后的数据
 │   ├── chroma_db/         # 向量数据库
 │   └── mock_data.py       # 模拟数据存储 (Sprint 3)
+└── pyproject.toml           # 项目配置文件
+
+demos/                       # 演示脚本目录
 ├── demo_rag.py              # RAG 演示脚本
 ├── demo_document_processing.py # 文档处理演示
 ├── demo_tool_calling.py     # 工具调用演示 (Sprint 3)
-├── run_server.py            # API 服务启动脚本 (Sprint 5)
-└── pyproject.toml           # 项目配置文件
+├── demo_memory_management.py # 记忆管理演示 (Sprint 4)
+├── demo_script.py           # 基础演示脚本
+└── README.md                # 演示脚本说明文档
 
-start_all.sh                # 一键启动脚本（Redis + 后端 + 前端）
-start_dev.sh               # 后端启动脚本（Redis + 后端）
+scripts/                     # 启动脚本目录
+├── start_all.sh             # 一键启动脚本（Redis + 后端 + 前端）
+├── start_dev.sh             # 后端启动脚本（Redis + 后端）
+├── run_server.py            # API 服务启动脚本 (Sprint 5)
+└── README.md                # 脚本说明文档
+
+logs/                        # 日志文件目录
+├── backend.log              # 后端服务日志
+├── frontend.log             # 前端服务日志
+├── server.log               # 服务器日志
+├── .backend_pid             # 后端进程 ID
+└── .frontend_pid            # 前端进程 ID
 
 frontend/                    # 前端应用 (Sprint 6)
 ├── src/
@@ -150,7 +164,7 @@ plans/                       # Sprint 计划文档
 
 ```bash
 # 启动所有服务（Redis + 后端 + 前端）
-./start_all.sh
+./scripts/start_all.sh
 ```
 
 脚本会自动：
@@ -208,7 +222,7 @@ TEMPERATURE=0.7
 **方式一：使用后端启动脚本**
 ```bash
 # 启动 Redis 和后端服务
-./start_dev.sh
+./scripts/start_dev.sh
 
 # 在另一个终端启动前端
 cd frontend
@@ -221,7 +235,7 @@ npm run dev
 redis-server --daemonize yes
 
 # 终端 2: 启动后端 API 服务
-python run_server.py
+python scripts/run_server.py
 
 # 终端 3: 启动前端开发服务器
 cd frontend
@@ -239,22 +253,28 @@ npm run dev
 
 ```bash
 # RAG 演示
-python demo_rag.py
+python demos/demo_rag.py
 
 # 文档处理演示
-python demo_document_processing.py
+python demos/demo_document_processing.py
 
 # 交互式 RAG 演示
-python demo_rag.py --interactive
+python demos/demo_rag.py --interactive
 
 # 工具调用演示 (Sprint 3)
-python demo_tool_calling.py
+python demos/demo_tool_calling.py
 
 # 交互式工具调用演示 (Sprint 3)
-python demo_tool_calling.py --interactive
+python demos/demo_tool_calling.py --interactive
+
+# 记忆管理演示 (Sprint 4)
+python demos/demo_memory_management.py
+
+# 基础演示
+python demos/demo_script.py
 
 # 启动 API 服务 (Sprint 5)
-python run_server.py
+python scripts/run_server.py
 ```
 
 ### 构建生产版本

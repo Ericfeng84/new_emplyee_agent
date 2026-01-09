@@ -11,3 +11,21 @@ wheels/
 
 # Environment variables
 .env
+
+# Log files
+*.log
+logs/
+
+# PID files
+*.pid
+
+# Database files
+*.rdb
+*.db
+
+# OS files
+.DS_Store
+
+# IDE files
+.vscode/
+.idea/

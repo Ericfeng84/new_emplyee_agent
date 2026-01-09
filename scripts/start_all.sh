@@ -60,6 +60,15 @@ if ! command_exists redis-server; then
     exit 1
 fi
 
+# Activate virtual environment if it exists
+if [ -d ".venv" ]; then
+    echo "Using virtual environment: .venv"
+    source .venv/bin/activate
+elif [ -d "venv" ]; then
+    echo "Using virtual environment: venv"
+    source venv/bin/activate
+fi
+
 # Check if Node.js is installed
 if ! command_exists node; then
     echo -e "${RED}❌ Node.js is not installed. Please install Node.js first.${NC}"

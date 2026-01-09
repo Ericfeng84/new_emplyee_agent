@@ -1,8 +1,0 @@
-INFO:     Will watch for changes in these directories: ['/Users/fengkang/Repository/new_emplyee_agent']
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [41726] using WatchFiles
-USER_AGENT environment variable not set, consider setting it to identify your requests.
-INFO:     Started server process [41728]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     127.0.0.1:53975 - "GET /v1/health HTTP/1.1" 200 OK
