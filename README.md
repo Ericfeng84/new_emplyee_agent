@@ -29,6 +29,28 @@ Nexus Agent 是一个智能助手，专门为公司新员工提供入职支持�
   - 工具调用元数据追踪
   - 完整的测试套件（45个测试用例）
 
+- **Sprint 4**: 记忆管理 (Redis) ✅
+  - 基于 Redis 的会话持久化
+  - 智能上下文压缩与 Token 管理
+  - 多用户会话隔离
+  - 会话元数据管理
+
+- **Sprint 5**: API 服务与编排 (FastAPI) ✅
+  - 统一的 RESTful API 接口
+  - OpenAI 兼容的 `/v1/chat/completions` 接口
+  - 完善的会话管理接口 `/v1/sessions`
+  - 统一错误处理与日志中间件
+  - Swagger UI / ReDoc 自动文档生成
+
+- **Sprint 6**: 前端开发 (React) ✅
+  - React 18 + Vite 构建工具
+  - 模块化组件架构（App、ChatWindow、Sidebar）
+  - Axios API 客户端与错误处理
+  - 会话管理与持久化（localStorage）
+  - 乐观 UI 更新与 Markdown 渲染
+  - CSS Modules 样式方案
+  - 完整的前端开发文档
+
 ## 📁 项目结构
 
 ```
@@ -42,7 +64,16 @@ nexus_agent/
 │   ├── state.py             # 对话状态管理
 │   ├── tools.py             # 工具函数
 │   └── middleware.py        # 中间件
-├── rag/                      # RAG 相关模块
+├── storage/                  # 存储相关模块 (Sprint 4)
+│   ├── redis_client.py      # Redis 客户端封装
+│   ├── session_manager.py   # 会话管理器
+│   └── context_manager.py   # 上下文压缩与管理
+├── api/                      # API 服务模块 (Sprint 5)
+│   ├── main.py              # 应用入口
+│   ├── dependencies.py      # 依赖注入
+│   ├── routers/             # 路由模块 (chat, sessions, health)
+│   └── schemas/             # Pydantic 数据模型
+├── rag/                      # RAG 相关模块 (Sprint 2)
 │   ├── document_loader.py   # 文档加载
 │   ├── text_splitter.py     # 文本分割
 │   ├── embeddings.py        # 嵌入模型
@@ -67,14 +98,41 @@ nexus_agent/
 │   ├── processed/          # 处理后的数据
 │   ├── chroma_db/         # 向量数据库
 │   └── mock_data.py       # 模拟数据存储 (Sprint 3)
-├── plans/                    # Sprint 计划文档
-│   ├── sprint1-prototype-plan.md
-│   ├── sprint2-rag-basics-plan.md
-│   ├── sprint3-tool-calling-plan.md
-│   └── langchain-1.0-syntax-guide.md
 ├── demo_rag.py              # RAG 演示脚本
 ├── demo_document_processing.py # 文档处理演示
-└── demo_tool_calling.py     # 工具调用演示 (Sprint 3)
+├── demo_tool_calling.py     # 工具调用演示 (Sprint 3)
+├── run_server.py            # API 服务启动脚本 (Sprint 5)
+└── pyproject.toml           # 项目配置文件
+
+start_all.sh                # 一键启动脚本（Redis + 后端 + 前端）
+start_dev.sh               # 后端启动脚本（Redis + 后端）
+
+frontend/                    # 前端应用 (Sprint 6)
+├── src/
+│   ├── api/
+│   │   └── client.js       # Axios API 客户端
+│   ├── components/
+│   │   ├── ChatWindow.jsx  # 聊天窗口组件
+│   │   ├── ChatWindow.module.css
+│   │   ├── Sidebar.jsx     # 侧边栏组件
+│   │   └── Sidebar.module.css
+│   ├── App.jsx             # 根组件
+│   ├── App.css             # 全局样式
+│   ├── main.jsx            # 应用入口
+│   └── index.css           # 基础样式
+├── public/                  # 静态资源
+├── index.html               # HTML 模板
+├── package.json             # 依赖配置
+├── vite.config.js           # Vite 配置
+└── eslint.config.js         # ESLint 配置
+
+plans/                       # Sprint 计划文档
+├── sprint1-prototype-plan.md
+├── sprint2-rag-basics-plan.md
+├── sprint3-tool-calling-plan.md
+├── sprint4-memory-management-plan.md
+├── sprint5-fastapi-plan.md
+└── sprint6-frontend-development.md  # 前端开发文档 (Sprint 6)
 ```
 
 ## 🚀 快速开始
@@ -82,19 +140,50 @@ nexus_agent/
 ### 环境要求
 
 - Python 3.12+
+- Node.js 18+
+- Redis 服务器
 - pip 或 uv 包管理器
 
-### 安装依赖
+### 一键启动（推荐）⭐
+
+使用一键启动脚本自动启动所有服务（Redis、后端、前端）：
 
 ```bash
-# 使用 uv（推荐）
+# 启动所有服务（Redis + 后端 + 前端）
+./start_all.sh
+```
+
+脚本会自动：
+1. ✅ 启动 Redis 服务器
+2. ✅ 检查并安装前端依赖
+3. ✅ 启动后端 API 服务（端口 8001）
+4. ✅ 启动前端开发服务器（端口 5173）
+5. ✅ 验证所有服务正常运行
+
+启动后，在浏览器中打开：**http://localhost:5173**
+
+**停止服务**：按 `Ctrl+C` 即可停止所有服务
+
+### 手动启动
+
+如果需要手动启动各个服务，请按以下步骤操作：
+
+#### 1. 安装依赖
+
+```bash
+# 后端依赖（使用 uv 推荐）
 uv sync
 
 # 或使用 pip
 pip install -r requirements.txt
+
+# 前端依赖
+cd frontend
+npm install
+cd ..
 ```
 
-### 配置环境变量
+#### 2. 配置环境变量
 
 创建 `.env` 文件：
 
@@ -114,6 +203,38 @@ LLM_MODEL=deepseek-chat
 TEMPERATURE=0.7
 ```
 
+#### 3. 启动服务
+
+**方式一：使用后端启动脚本**
+```bash
+# 启动 Redis 和后端服务
+./start_dev.sh
+
+# 在另一个终端启动前端
+cd frontend
+npm run dev
+```
+
+**方式二：完全手动**
+```bash
+# 终端 1: 启动 Redis
+redis-server --daemonize yes
+
+# 终端 2: 启动后端 API 服务
+python run_server.py
+
+# 终端 3: 启动前端开发服务器
+cd frontend
+npm run dev
+```
+
+#### 4. 访问应用
+
+- **前端应用**: http://localhost:5173
+- **后端 API**: http://localhost:8001
+- **API 文档**: http://localhost:8001/docs
+- **Redis**: localhost:6379
+
 ### 运行演示
 
 ```bash
@@ -131,6 +252,22 @@ python demo_tool_calling.py
 
 # 交互式工具调用演示 (Sprint 3)
 python demo_tool_calling.py --interactive
+
+# 启动 API 服务 (Sprint 5)
+python run_server.py
+```
+
+### 构建生产版本
+
+```bash
+# 进入前端目录
+cd frontend
+
+# 构建生产版本
+npm run build
+
+# 预览生产构建
+npm run preview
 ```
 
 ### 运行测试
@@ -302,6 +439,40 @@ print(response.content)
 - `get_available_meeting_rooms` - 查询可用会议室
 - `retrieve_context` - 检索知识库
 
+## 🌐 API 接口说明 (Sprint 5)
+
+### 1. 聊天接口
+**POST** `/v1/chat/completions`
+
+请求示例：
+```json
+{
+  "messages": [{"role": "user", "content": "张三是谁？"}],
+  "session_id": "optional-session-id",
+  "user": "james_bond"
+}
+```
+
+### 2. 会话管理
+- **POST** `/v1/sessions/` - 创建新会话
+- **GET** `/v1/sessions/{session_id}` - 获取会话信息
+- **GET** `/v1/sessions/{session_id}/history` - 获取历史消息
+
+### 3. API 文档
+启动服务后访问：
+- Swagger UI: `http://localhost:8001/docs`
+- ReDoc: `http://localhost:8001/redoc`
+
+## ⌨️ 存储与记忆 (Sprint 4)
+
+项目使用 Redis 进行会话管理。请确保 Redis 服务已启动。
+
+```bash
+# Redis 默认配置
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
 ## 🔧 配置说明
 
 ### LLM 配置
@@ -337,7 +508,11 @@ print(response.content)
 - [Sprint 1 计划](plans/sprint1-prototype-plan.md)
 - [Sprint 2 计划](plans/sprint2-rag-basics-plan.md)
 - [Sprint 3 计划 - 工具调用 ✅ 已完成](plans/sprint3-tool-calling-plan.md)
+- [Sprint 5 计划 - API 服务 ✅ 已完成](plans/sprint5-fastapi-plan.md)
+- [Sprint 6 前端开发文档 ✅ 已完成](plans/sprint6-frontend-development.md)
 - [LangChain 1.0 语法指南](plans/langchain-1.0-syntax-guide.md)
+- [CORS 问题解决方案](document/CORS-Issue-Resolution.md)
+- [快速开始指南](document/Quick-Start-Guide.md)
 
 ## 🧪 测试
 
@@ -423,6 +598,44 @@ Sprint 3 已成功完成！以下是主要成就：
 **完成日期：** 2026-01-05
 **状态：** ✅ 成功完成
 
+## 🏆 Sprint 6 成就
+
+Sprint 6 已成功完成！以下是主要成就：
+
+### 核心功能
+- ✅ 实现了完整的 React 18 前端应用
+- ✅ 创建了模块化组件架构（App、ChatWindow、Sidebar）
+- ✅ 集成了 Axios API 客户端与完善的错误处理
+- ✅ 实现了会话管理与 localStorage 持久化
+- ✅ 实现了乐观 UI 更新与即时反馈
+- ✅ 集成了 React Markdown 渲染支持
+- ✅ 使用 CSS Modules 实现样式隔离
+
+### 技术栈
+- ✅ React 18 + Hooks
+- ✅ Vite 构建工具
+- ✅ Axios HTTP 客户端
+- ✅ Lucide React 图标库
+- ✅ React Markdown 渲染
+- ✅ CSS Modules 样式方案
+
+### 代码质量
+- ✅ 遵循 React 最佳实践
+- ✅ 详细的中文注释和文档
+- ✅ 良好的错误处理和用户友好的提示
+- ✅ 响应式设计支持
+- ✅ 完整的 API 集成文档
+
+### 文档和演示
+- ✅ 完整的 Sprint 6 前端开发文档
+- ✅ 组件架构说明
+- ✅ API 集成指南
+- ✅ 开发规范和最佳实践
+- ✅ 测试策略和部署指南
+
+**完成日期：** 2026-01-09
+**状态：** ✅ 成功完成
+
 ## 🗺️ 路线图
 
 ### ✅ Sprint 3: 工具使用 / 函数调用 - 已完成
@@ -431,10 +644,26 @@ Sprint 3 已成功完成！以下是主要成就：
 - 预订会议室、查询系统等工具
 - 45个测试用例，覆盖率 > 90%
 
-### Sprint 4: 高级功能
+### ✅ Sprint 4: 记忆管理 - 已完成
+- 基于 Redis 的对话持久化
+- 智能上下文压缩
+
+### ✅ Sprint 5: API 服务与编排 - 已完成
+- FastAPI 封装与封装
+- 标准 OpenAI 兼容接口
+
+### ✅ Sprint 6: 前端开发 - 已完成
+- React 18 + Vite 前端应用
+- 模块化组件架构
+- 会话管理与持久化
+- 乐观 UI 更新
+- 完整的前端开发文档
+
+### Sprint 7: 高级功能与优化
 - 多模态支持（图像、音频）
 - 知识图谱集成
 - 个性化推荐
+- 前端功能增强（聊天历史、搜索、导出）
 
 ## 📄 许可证
 

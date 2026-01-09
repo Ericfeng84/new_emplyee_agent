@@ -20,6 +20,8 @@ from .middleware import (
     ToolErrorMiddleware
 )
 from .prompts import BASE_SYSTEM_PROMPT
+from ..storage.session_manager import SessionManager
+from ..storage.context_manager import ContextManager
 
 
 @dataclass
@@ -31,6 +33,7 @@ class AgentResponse:
     tokens_used: Optional[Dict[str, int]] = None
     duration: Optional[float] = None
     context_id: Optional[str] = None
+    session_id: Optional[str] = None  # Sprint 4: 添加 session_id
     metadata: Optional[Dict[str, Any]] = None
     tool_calls: Optional[List[Dict[str, Any]]] = None
 
@@ -50,13 +53,15 @@ class NexusLangChainAgent:
                  provider: str = None,
                  model: str = None,
                  temperature: float = None,
-                 enable_safety_checks: bool = True):
+                 enable_safety_checks: bool = True,
+                 enable_memory: bool = False):  # Sprint 4: 新增记忆管理参数
         
         # Configuration
         self.provider = provider or config.llm_provider
         self.model = model or config.llm_model
         self.temperature = temperature if temperature is not None else config.temperature
         self.enable_safety_checks = enable_safety_checks
+        self.enable_memory = enable_memory  # Sprint 4: 记忆功能开关
         
         # Initialize logger
         self.logger = get_logger("nexus_langchain_agent")
@@ -99,12 +104,26 @@ class NexusLangChainAgent:
         # Initialize default context
         self.default_context_id = "default_conversation"
         
+        # Sprint 4: 初始化记忆管理
+        if self.enable_memory:
+            self.session_manager = SessionManager()
+            self.context_manager = ContextManager()
+            self.logger.log_system_event("memory_enabled", {
+                "redis_host": config.redis_host,
+                "redis_port": config.redis_port,
+                "max_context_tokens": config.max_context_tokens
+            })
+        else:
+            self.session_manager = None
+            self.context_manager = None
+        
         self.logger.log_system_event("agent_initialized", {
             "provider": self.provider,
             "model": self.model,
             "temperature": self.temperature,
             "safety_checks": self.enable_safety_checks,
-            "tools_count": len(self.tools)
+            "tools_count": len(self.tools),
+            "memory_enabled": self.enable_memory
         })
     
     def _get_model(self) -> ChatOpenAI:
@@ -135,6 +154,8 @@ class NexusLangChainAgent:
     def process_message(self,
                        user_input: str,
                        context_id: str = None,
+                       user_id: str = None,
+                       session_id: str = None,  # Sprint 4: 新增 session_id 参数
                        user_preferences: Dict[str, Any] = None) -> AgentResponse:
         """
         Process a user message and generate a response
@@ -142,6 +163,8 @@ class NexusLangChainAgent:
         Args:
             user_input: The user's input message
             context_id: Optional conversation context ID
+            user_id: Optional user ID for session management
+            session_id: Optional session ID for memory management
             user_preferences: Optional user preferences for context
             
         Returns:
@@ -149,15 +172,31 @@ class NexusLangChainAgent:
         """
         import time
         
+        start_time = time.time()
+        
+        # Sprint 4: 记忆管理
+        history = []
+        if self.enable_memory:
+            # 如果没有 session_id，创建新会话
+            if not session_id:
+                session_id = self.session_manager.create_session(user_id=user_id)
+            
+            # 加载历史对话
+            history = self.session_manager.get_conversation_history(session_id)
+            
+            # 上下文压缩
+            if history:
+                history = self.context_manager.compress_context(history)
+        
         # Use default context if none provided
         if context_id is None:
             context_id = self.default_context_id
         
         # Prepare input state
         input_state = {
-            "messages": [HumanMessage(content=user_input)],
-            "user_id": "default",
-            "session_id": context_id,
+            "messages": self._build_messages(user_input, history),  # Sprint 4: 使用历史消息
+            "user_id": user_id or "default",
+            "session_id": session_id or context_id,
             "user_preferences": user_preferences or {},
             "conversation_stats": {}
         }
@@ -165,10 +204,9 @@ class NexusLangChainAgent:
         response = AgentResponse(
             content="",
             success=False,
-            context_id=context_id
+            context_id=context_id,
+            session_id=session_id  # Sprint 4: 返回 session_id
         )
-        
-        start_time = time.time()
         
         try:
             # Invoke the agent
@@ -192,8 +230,29 @@ class NexusLangChainAgent:
             response.metadata = {
                 "provider": self.provider,
                 "model": self.model,
-                "context_id": context_id
+                "context_id": context_id,
+                "session_id": session_id
             }
+            
+            # Sprint 4: 保存到历史
+            if self.enable_memory and session_id:
+                # 保存用户消息
+                self.session_manager.add_message(
+                    session_id,
+                    role="user",
+                    content=user_input
+                )
+                
+                # 保存助手响应
+                self.session_manager.add_message(
+                    session_id,
+                    role="assistant",
+                    content=response.content,
+                    metadata={
+                        "tool_calls": response.tool_calls,
+                        "duration": response.duration
+                    }
+                )
             
             # Log conversation
             self.logger.log_conversation(
@@ -201,6 +260,7 @@ class NexusLangChainAgent:
                 agent_response=response.content,
                 metadata={
                     "context_id": context_id,
+                    "session_id": session_id,
                     "duration": response.duration,
                     "tool_calls_count": len(response.tool_calls) if response.tool_calls else 0
                 }
@@ -211,6 +271,7 @@ class NexusLangChainAgent:
         except Exception as e:
             self.logger.log_error(e, {
                 "context_id": context_id,
+                "session_id": session_id,
                 "user_input": user_input
             })
             
@@ -332,6 +393,108 @@ class NexusLangChainAgent:
             "tools": [tool.name for tool in self.tools],
             "middleware_count": len(self.middleware)
         }
+    
+    def _build_messages(
+        self,
+        user_message: str,
+        history: List[Dict] = None
+    ) -> List:
+        """
+        构建消息列表
+        
+        Args:
+            user_message: 用户消息
+            history: 历史消息（可选）
+            
+        Returns:
+            消息列表
+        """
+        messages = []
+        
+        # 添加系统提示词
+        messages.append(HumanMessage(content=BASE_SYSTEM_PROMPT))
+        
+        # 添加历史消息
+        if history:
+            for msg in history:
+                role = msg.get("role")
+                content = msg.get("content")
+                if role == "user":
+                    messages.append(HumanMessage(content=content))
+                elif role == "assistant":
+                    messages.append(HumanMessage(content=content))  # 使用 HumanMessage 作为临时方案
+                elif role == "system":
+                    messages.append(HumanMessage(content=content))
+        
+        # 添加当前用户消息
+        messages.append(HumanMessage(content=user_message))
+        
+        return messages
+    
+    def get_session_info(self, session_id: str) -> Optional[Dict]:
+        """
+        获取会话信息
+        
+        Args:
+            session_id: 会话 ID
+            
+        Returns:
+            会话信息
+        """
+        if not self.enable_memory or not self.session_manager:
+            return None
+        
+        return self.session_manager.get_session(session_id)
+    
+    def get_conversation_history(
+        self,
+        session_id: str,
+        limit: Optional[int] = None
+    ) -> List[Dict]:
+        """
+        获取对话历史
+        
+        Args:
+            session_id: 会话 ID
+            limit: 限制返回的消息数量（可选）
+            
+        Returns:
+            消息列表
+        """
+        if not self.enable_memory or not self.session_manager:
+            return []
+        
+        return self.session_manager.get_conversation_history(session_id, limit)
+    
+    def clear_session(self, session_id: str) -> bool:
+        """
+        清空会话历史
+        
+        Args:
+            session_id: 会话 ID
+            
+        Returns:
+            是否清空成功
+        """
+        if not self.enable_memory or not self.session_manager:
+            return False
+        
+        return self.session_manager.clear_history(session_id)
+    
+    def delete_session(self, session_id: str) -> bool:
+        """
+        删除会话
+        
+        Args:
+            session_id: 会话 ID
+            
+        Returns:
+            是否删除成功
+        """
+        if not self.enable_memory or not self.session_manager:
+            return False
+        
+        return self.session_manager.delete_session(session_id)
     
     def test_connection(self) -> bool:
         """Test if the agent is working"""

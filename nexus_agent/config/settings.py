@@ -173,6 +173,54 @@ class NexusConfig(BaseSettings):
         description="每次查询最多调用工具次数"
     )
     
+    # Sprint 4: Memory Management Configuration
+    # Redis Configuration
+    redis_host: str = Field(
+        default="localhost",
+        description="Redis server host"
+    )
+    redis_port: int = Field(
+        default=6379,
+        ge=1,
+        le=65535,
+        description="Redis server port"
+    )
+    redis_db: int = Field(
+        default=0,
+        ge=0,
+        le=15,
+        description="Redis database number"
+    )
+    redis_password: Optional[str] = Field(
+        default=None,
+        description="Redis password (if required)"
+    )
+    
+    # Session Management Configuration
+    session_ttl: int = Field(
+        default=60 * 60 * 24 * 7,  # 7天（秒）
+        ge=60,
+        description="Session time-to-live in seconds"
+    )
+    max_history_length: int = Field(
+        default=100,
+        ge=10,
+        le=1000,
+        description="Maximum number of messages in conversation history"
+    )
+    max_context_tokens: int = Field(
+        default=4000,
+        ge=1000,
+        le=32000,
+        description="Maximum tokens for conversation context"
+    )
+    context_compression_threshold: float = Field(
+        default=0.8,
+        ge=0.5,
+        le=1.0,
+        description="Context compression threshold (80% by default)"
+    )
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
